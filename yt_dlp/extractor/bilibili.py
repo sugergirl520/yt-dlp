@@ -231,7 +231,7 @@ class BilibiliBaseIE(InfoExtractor):
                 height=height,
                 bottom_reserved=int(height * 0.20),
                 font_name='Noto Sans CJK SC',
-                font_size=35.0,
+                font_size=40.0,
                 alpha=0.8,
                 duration_marquee=15.0,
                 duration_still=5.0,
