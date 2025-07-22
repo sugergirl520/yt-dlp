@@ -363,6 +363,7 @@ class BilibiliBaseIE(InfoExtractor):
                 'text': ('option', {str}),
             }),
         })))
+        # use dict to combine edges that use the same video section (same cid)
         cid_edges.setdefault(edges[edge_id]['cid'], {})[edge_id] = edges[edge_id]
         for choice in traverse_obj(edges, (edge_id, 'choices', ...)):
             if choice['edge_id'] not in edges:
@@ -987,7 +988,7 @@ class BiliBiliBangumiIE(BilibiliBaseIE):
                 'Extracting episode', query={'fnval': 12240, 'ep_id': episode_id},
                 headers=headers))
 
-        # play_info can be structured in one of at least three ways, e.g.:
+        # play_info can be structured in at least three different ways, e.g.:
         # 1.) play_info['result']['video_info'] and play_info['code']
         # 2.) play_info['raw']['data']['video_info'] and play_info['code']
         # 3.) play_info['data']['result']['video_info'] and play_info['data']['code']
@@ -1017,7 +1018,7 @@ class BiliBiliBangumiIE(BilibiliBaseIE):
 
         if traverse_obj(play_info, ((
             ('play_check', 'play_detail'),  # 'PLAY_PREVIEW' vs 'PLAY_WHOLE' vs 'PLAY_NONE'
-            'play_video_type',  # 'preview' vs 'whole' vs 'none'
+            'play_video_type',              # 'preview' vs 'whole' vs 'none'
         ), any, {lambda x: x in ('PLAY_PREVIEW', 'preview')})):
             self.report_warning(
                 'Only preview format is available, '
