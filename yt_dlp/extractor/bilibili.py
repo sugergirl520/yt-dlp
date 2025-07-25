@@ -176,13 +176,6 @@ class BilibiliBaseIE(InfoExtractor):
         else:
             note = f'Downloading video formats for cid {cid}'
 
-        # TODO: remove this patch once utils.networking.random_user_agent() is updated, see #13735
-        # playurl requests carrying old UA will be rejected
-        headers = {
-            'User-Agent': f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(118,138)}.0.0.0 Safari/537.36',
-            **(headers or {}),
-        }
-
         return self._download_json(
             'https://api.bilibili.com/x/player/wbi/playurl', bvid,
             query=self._sign_wbi(params, bvid), headers=headers, note=note)['data']
@@ -195,107 +188,66 @@ class BilibiliBaseIE(InfoExtractor):
                          f'{line["content"]}\n\n')
         return srt_data
 
-    def _get_subtitles(self, video_id, cid, aid=None, user_font_size=None, user_alpha=None,
-                       user_position=None, user_color=None):
-        self.to_screen(f'Extracting subtitles for video {video_id}, cid {cid}')
+    def _get_subtitles(self, video_id, cid, aid=None):
         subtitles = {}
-
+        
+        video_info = self._download_json(
+            'https://api.bilibili.com/x/player/wbi/v2', video_id,
+            query={'aid': aid, 'cid': cid} if aid else {'bvid': video_id, 'cid': cid},
+            note=f'Extracting subtitle info {cid}', headers=self._HEADERS)
+        
+        if traverse_obj(video_info, ('data', 'need_login_subtitle')):
+            self.report_warning(
+                f'Subtitles are only available when logged in. {self._login_hint()}', only_once=True)
+        
+        for s in traverse_obj(video_info, (
+                'data', 'subtitle', 'subtitles', lambda _, v: v['subtitle_url'] and v['lan'])):
+            subtitles.setdefault(s['lan'], []).append({
+                'ext': 'srt',
+                'data': self.json2srt(self._download_json(s['subtitle_url'], video_id)),
+            })
+        
+        danmaku_url = f'https://comment.bilibili.com/{cid}.xml'
         try:
-            width = 1920
-            height = 1080
-
-            try:
-                video_info = self._download_json(
-                    'https://api.bilibili.com/x/player/wbi/v2', video_id,
-                    query={'bvid': video_id, 'cid': cid},
-                    fatal=False) or {}
-
-                video_data = traverse_obj(video_info, ('data', 'videoData'))
-                if video_data:
-                    width = int_or_none(video_data.get('width')) or width
-                    height = int_or_none(video_data.get('height')) or height
-                    self.to_screen(f'Resolution from videoData: {width}x{height}')
-                else:
-                    play_info = traverse_obj(video_info, ('data', 'play_info'))
-                    if play_info:
-                        width = int_or_none(play_info.get('width')) or width
-                        height = int_or_none(play_info.get('height')) or height
-                        self.to_screen(f'Resolution from play_info: {width}x{height}')
-            except Exception:
-                self.report_warning('Failed to get resolution')
-
-            xml_url = f'https://comment.bilibili.com/{cid}.xml'
-            self.to_screen(f'Downloading danmaku XML from {xml_url}')
-            xml_data = self._download_webpage(
-                xml_url, video_id,
-                fatal=False) or ''
-
-            self.to_screen(f'Downloaded danmaku XML, length: {len(xml_data)!s}')
-
-            self.to_screen('Converting danmaku to ASS')
-            converter = XML2ASSConverter(
-                width=width,
-                height=height,
-                bottom_reserved=int(height * 0.20),
-                font_name='Noto Sans CJK SC',
-                font_size=40.0,
-                alpha=0.8,
-                duration_marquee=15.0,
-                duration_still=5.0,
-            )
-            ass_content = converter.convert(
-                xml_data,
-                user_font_size=user_font_size,
-                user_alpha=user_alpha,
-                user_position=user_position,
-                user_color=user_color,
-            )
-
-            if ass_content:
-                self.to_screen(f'Converted to ASS, length: {len(ass_content)!s}')
+            danmaku_xml = self._download_webpage(
+                danmaku_url, video_id, 
+                note='Downloading danmaku', 
+                fatal=False,
+                errnote='Danmaku download failed')
+            
+            if danmaku_xml:
+                video_width = traverse_obj(video_info, ('data', 'video_data', 'width')) or 1920
+                video_height = traverse_obj(video_info, ('data', 'video_data', 'height')) or 1080
+                
+                converter = XML2ASSConverter(
+                    width=video_width,
+                    height=video_height,
+                    font_name='Microsoft YaHei',
+                    font_size=30.0,
+                    alpha=0.6,
+                    duration_marquee=15.0,
+                    duration_still=5.0
+                )
+                
+                ass_data = converter.convert(danmaku_xml)
+                
+                if ass_data:
+                    subtitles['danmaku'] = [{
+                        'ext': 'ass',
+                        'data': ass_data
+                    }]
+        except Exception:
+            subtitles['danmaku'] = [{
+                'ext': 'xml',
+                'url': danmaku_url,
+            }]
+        else:
+            if not subtitles.get('danmaku'):
                 subtitles['danmaku'] = [{
-                    'ext': 'ass',
-                    'data': ass_content,
-                    'language': 'danmaku',
+                    'ext': 'xml',
+                    'url': danmaku_url,
                 }]
-            else:
-                self.report_warning('Danmaku conversion failed: empty output')
-
-        except Exception as e:
-            self.report_warning(f'Failed to convert danmaku to ASS: {str(e)!s}. Danmaku subtitles will be skipped.')
-
-        try:
-            video_info = self._download_json(
-                'https://api.bilibili.com/x/player/wbi/v2', video_id,
-                query={'aid': aid, 'cid': cid} if aid else {'bvid': video_id, 'cid': cid},
-                headers=self._HEADERS)
-
-            if traverse_obj(video_info, ('data', 'need_login_subtitle')):
-                self.report_warning(
-                    f'Subtitles are only available when logged in. {self._login_hint()}', only_once=True)
-
-            for s in traverse_obj(video_info, (
-                    'data', 'subtitle', 'subtitles', lambda _, v: v.get('subtitle_url') and v.get('lan') and v.get('lan') != 'danmaku')):
-                lang = s.get('lan', 'unknown')
-                url = s.get('subtitle_url')
-                self.to_screen(f'Processing non-danmaku subtitle: lang={lang!s}, url={url!s}')
-
-                try:
-                    json_data = self._download_json(url, video_id, fatal=False) or {}
-                    srt_data = self.json2srt(json_data)
-                    if srt_data.strip():
-                        subtitles.setdefault(lang, []).append({
-                            'ext': 'srt',
-                            'data': srt_data,
-                        })
-                    else:
-                        self.report_warning(f'No valid data for subtitle {lang!s}')
-                except Exception as e:
-                    self.report_warning(f'Failed to process subtitle {lang!s}: {str(e)!s}')
-
-        except Exception as e:
-            self.report_warning(f'Failed to extract other subtitles: {str(e)!s}')
-
+        
         return subtitles
 
     def _get_chapters(self, aid, cid):
@@ -341,7 +293,7 @@ class BilibiliBaseIE(InfoExtractor):
         for entry in traverse_obj(season_info, (
                 'result', 'main_section', 'episodes',
                 lambda _, v: url_or_none(v['share_url']) and v['id'])):
-            yield self.url_result(entry['share_url'], BiliBiliBangumiIE, str_or_none(entry.get('id')), str_or_none(entry.get('long_title') or entry.get('title')))  # videotitle
+            yield self.url_result(entry['share_url'], BiliBiliBangumiIE, str_or_none(entry.get('id')), str_or_none(entry.get('long_title') or entry.get('title')))
 
     def _get_divisions(self, video_id, graph_version, edges, edge_id, cid_edges=None):
         cid_edges = cid_edges or {}
@@ -387,7 +339,7 @@ class BilibiliBaseIE(InfoExtractor):
                 'formats': self.extract_formats(play_info),
                 'description': f'{json.dumps(edges, ensure_ascii=False)}\n{metainfo.get("description", "")}',
                 'duration': float_or_none(play_info.get('timelength'), scale=1000),
-                'subtitles': self._get_subtitles(video_id, cid),
+                'subtitles': self.extract_subtitles(video_id, cid),
             }
 
 
