@@ -237,17 +237,6 @@ class BilibiliBaseIE(InfoExtractor):
                         'ext': 'ass',
                         'data': ass_data,
                     }]
-        except Exception:
-            subtitles['danmaku'] = [{
-                'ext': 'xml',
-                'url': danmaku_url,
-            }]
-        else:
-            if not subtitles.get('danmaku'):
-                subtitles['danmaku'] = [{
-                    'ext': 'xml',
-                    'url': danmaku_url,
-                }]
 
         return subtitles
 
