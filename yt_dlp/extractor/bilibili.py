@@ -210,8 +210,8 @@ class BilibiliBaseIE(InfoExtractor):
         danmaku_url = f'https://comment.bilibili.com/{cid}.xml'
         try:
             danmaku_xml = self._download_webpage(
-                danmaku_url, video_id, 
-                note='Downloading danmaku', 
+                danmaku_url, video_id,
+                note='Downloading danmaku',
                 fatal=False,
                 errnote='Danmaku download failed')
 
@@ -223,8 +223,8 @@ class BilibiliBaseIE(InfoExtractor):
                     width=video_width,
                     height=video_height,
                     font_name='Microsoft YaHei',
-                    font_size=30.0,
-                    alpha=0.6,
+                    font_size=40.0,
+                    alpha=0.8,
                     duration_marquee=15.0,
                     duration_still=5.0,
                 )
