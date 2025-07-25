@@ -636,6 +636,7 @@ from .fancode import (
     FancodeVodIE,
 )
 from .fathom import FathomIE
+from .faulio import FaulioLiveIE
 from .faz import FazIE
 from .fc2 import (
     FC2IE,
@@ -1564,6 +1565,7 @@ from .pluralsight import (
 )
 from .plutotv import PlutoTVIE
 from .plvideo import PlVideoIE
+from .plyr import PlyrEmbedIE
 from .podbayfm import (
     PodbayFMChannelIE,
     PodbayFMIE,
