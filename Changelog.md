@@ -4,6 +4,34 @@
 # To create a release, dispatch the https://github.com/yt-dlp/yt-dlp/actions/workflows/release.yml workflow on master
 -->
 
+### 2025.07.25.115741
+
+#### Core changes
+- [Create xml2ass.py](https://github.com/yt-dlp/yt-dlp/commit/1c76f86a6472b7629e98f49a4c802bedd865ab0c) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/ac6181bbbabbd0188a649df85f845dfc66b29742) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/649e4434e1d8b3c9788c437a7bef11f90c2502c6) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/55d9a21fdcbf04baf1ff448003ebd66a53e1e58e) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/7dff7f8093ccc73f250f0ac7e3bf6ecc648c20f7) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/1f6d7c1584f1fa7c2ae0931f1e19c249994dc3d2) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/06c14c59b288061a53d1b7464bfdd7aad9406a6d) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/596fa7c14a319f743f97734d67a73e489334ba46) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/f216ba1fd2a526d046b25d733db9e2994a298ca6) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/11e3fae915ad86953df2dde44b1c26a7c75a0ae9) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/2251acaf778c0a674ed4e4d9251dd3aaacff5422) by [pukkandan](https://github.com/pukkandan)
+- **utils**
+    - [Add `WINDOWS_VT_MODE` to globals](https://github.com/yt-dlp/yt-dlp/commit/eed94c7306d4ecdba53ad8783b1463a9af5c97f1) ([#12460](https://github.com/yt-dlp/yt-dlp/issues/12460)) by [Grub4K](https://github.com/Grub4K)
+    - `random_user_agent`: [Bump versions](https://github.com/yt-dlp/yt-dlp/commit/c59ad2b066bbccd3cc4eed580842f961bce7dd4a) ([#13543](https://github.com/yt-dlp/yt-dlp/issues/13543)) by [bashonly](https://github.com/bashonly)
+
+#### Extractor changes
+- **parlview**: [Rework extractor](https://github.com/yt-dlp/yt-dlp/commit/485de69dbfeb7de7bcf9f7fe16d6c6ba9e81e1a0) ([#13788](https://github.com/yt-dlp/yt-dlp/issues/13788)) by [barryvan](https://github.com/barryvan)
+- **sproutvideo**: [Fix extractor](https://github.com/yt-dlp/yt-dlp/commit/59765ecbc08d18005de7143fbb1d1caf90239471) ([#13813](https://github.com/yt-dlp/yt-dlp/issues/13813)) by [bashonly](https://github.com/bashonly)
+- **tbs**: [Fix truTV support](https://github.com/yt-dlp/yt-dlp/commit/0adeb1e54b2d7e95cd19999e71013877850f8f41) ([#9683](https://github.com/yt-dlp/yt-dlp/issues/9683)) by [bashonly](https://github.com/bashonly), [ischmidt20](https://github.com/ischmidt20)
+- **vimeo**: [Fix login support and require authentication](https://github.com/yt-dlp/yt-dlp/commit/afaf60d9fd5a0c7a85aeb1374fd97fbc13cd652c) ([#13823](https://github.com/yt-dlp/yt-dlp/issues/13823)) by [bashonly](https://github.com/bashonly)
+
+#### Postprocessor changes
+- **embedthumbnail**: [Fix ffmpeg args for embedding in mp3](https://github.com/yt-dlp/yt-dlp/commit/7e3f48d64d237281a97b3df1a61980c78a0302fe) ([#13720](https://github.com/yt-dlp/yt-dlp/issues/13720)) by [atsushi2965](https://github.com/atsushi2965)
+- **xattrmetadata**: [Add macOS "Where from" attribute](https://github.com/yt-dlp/yt-dlp/commit/3e918d825d7ff367812658957b281b8cda8f9ebb) ([#12664](https://github.com/yt-dlp/yt-dlp/issues/12664)) by [rolandcrosby](https://github.com/rolandcrosby)
+
 ### 2025.07.21
 
 #### Important changes
