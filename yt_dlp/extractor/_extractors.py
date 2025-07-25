@@ -517,10 +517,6 @@ from .dlive import (
     DLiveStreamIE,
     DLiveVODIE,
 )
-from .douyutv import (
-    DouyuShowIE,
-    DouyuTVIE,
-)
 from .dplay import (
     TLCIE,
     AmHistoryChannelIE,
