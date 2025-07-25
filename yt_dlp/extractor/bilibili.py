@@ -208,35 +208,34 @@ class BilibiliBaseIE(InfoExtractor):
             })
 
         danmaku_url = f'https://comment.bilibili.com/{cid}.xml'
-        try:
-            danmaku_xml = self._download_webpage(
-                danmaku_url, video_id,
-                note='Downloading danmaku',
-                fatal=False,
-                errnote='Danmaku download failed')
+        danmaku_xml = self._download_webpage(
+            danmaku_url, video_id,
+            note='Downloading danmaku',
+            fatal=False,
+            errnote='Danmaku download failed')
 
-            if danmaku_xml:
-                video_width = traverse_obj(video_info, ('data', 'video_data', 'width')) or 1920
-                video_height = traverse_obj(video_info, ('data', 'video_data', 'height')) or 1080
+        if danmaku_xml:
+            video_width = traverse_obj(video_info, ('data', 'video_data', 'width')) or 1920
+            video_height = traverse_obj(video_info, ('data', 'video_data', 'height')) or 1080
 
-                converter = XML2ASSConverter(
-                    width=video_width,
-                    height=video_height,
-                    bottom_reserved=int(video_height * 0.20),
-                    font_name='Noto Sans CJK SC',
-                    font_size=40.0,
-                    alpha=0.8,
-                    duration_marquee=15.0,
-                    duration_still=5.0,
-                )
+            converter = XML2ASSConverter(
+                width=video_width,
+                height=video_height,
+                bottom_reserved=int(video_height * 0.20),
+                font_name='Noto Sans CJK SC',
+                font_size=40.0,
+                alpha=0.8,
+                duration_marquee=15.0,
+                duration_still=5.0,
+            )
 
-                ass_data = converter.convert(danmaku_xml)
+            ass_data = converter.convert(danmaku_xml)
 
-                if ass_data:
-                    subtitles['danmaku'] = [{
-                        'ext': 'ass',
-                        'data': ass_data,
-                    }]
+            if ass_data:
+                subtitles['danmaku'] = [{
+                    'ext': 'ass',
+                    'data': ass_data,
+                }]
 
         return subtitles
 
