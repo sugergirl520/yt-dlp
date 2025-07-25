@@ -222,7 +222,8 @@ class BilibiliBaseIE(InfoExtractor):
                 converter = XML2ASSConverter(
                     width=video_width,
                     height=video_height,
-                    font_name='Microsoft YaHei',
+                    bottom_reserved=int(video_height * 0.20),
+                    font_name='Noto Sans CJK SC',
                     font_size=40.0,
                     alpha=0.8,
                     duration_marquee=15.0,
@@ -293,7 +294,7 @@ class BilibiliBaseIE(InfoExtractor):
         for entry in traverse_obj(season_info, (
                 'result', 'main_section', 'episodes',
                 lambda _, v: url_or_none(v['share_url']) and v['id'])):
-            yield self.url_result(entry['share_url'], BiliBiliBangumiIE, str_or_none(entry.get('id')), str_or_none(entry.get('long_title') or entry.get('title')))
+            yield self.url_result(entry['share_url'], BiliBiliBangumiIE, str_or_none(entry.get('id')), str_or_none(entry.get('long_title') or entry.get('title')))  # videotitle
 
     def _get_divisions(self, video_id, graph_version, edges, edge_id, cid_edges=None):
         cid_edges = cid_edges or {}
