@@ -191,15 +191,10 @@ class BilibiliBaseIE(InfoExtractor):
     def _get_subtitles(self, video_id, cid, aid=None):
         subtitles = {}
 
-        headers = {
-            'Accept': '*/*',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0',
-        }
-
         video_info = self._download_json(
             'https://api.bilibili.com/x/player/wbi/v2', video_id,
             query={'aid': aid, 'cid': cid} if aid else {'bvid': video_id, 'cid': cid},
-            note=f'Extracting subtitle info {cid}', headers=headers)
+            note=f'Extracting subtitle info {cid}', headers=self._HEADERS)
 
         if traverse_obj(video_info, ('data', 'need_login_subtitle')):
             self.report_warning(
@@ -209,7 +204,7 @@ class BilibiliBaseIE(InfoExtractor):
                 'data', 'subtitle', 'subtitles', lambda _, v: v['subtitle_url'] and v['lan'])):
             subtitles.setdefault(s['lan'], []).append({
                 'ext': 'srt',
-                'data': self.json2srt(self._download_json(s['subtitle_url'], video_id, headers=headers)),
+                'data': self.json2srt(self._download_json(s['subtitle_url'], video_id)),
             })
 
         danmaku_url = f'https://comment.bilibili.com/{cid}.xml'
@@ -217,8 +212,7 @@ class BilibiliBaseIE(InfoExtractor):
             danmaku_url, video_id,
             note='Downloading danmaku',
             fatal=False,
-            errnote='Danmaku download failed',
-            headers=headers)
+            errnote='Danmaku download failed')
 
         if danmaku_xml:
             video_width = traverse_obj(video_info, ('data', 'video_data', 'width')) or 1920
@@ -1576,26 +1570,10 @@ class BilibiliFavoritesListIE(BilibiliSpaceListBaseIE):
         if list_info['code'] == -403:
             self.raise_login_required(msg='This is a private favorites list. You need to log in as its owner')
 
-        # 直接使用分页API获取所有条目并提取标题
-        entries = []
-        page_num = 1
-        has_more = True
-        while has_more:
-            page_data = self._download_json(
-                'https://api.bilibili.com/x/v3/fav/resource/list',
-                fid, note=f'Downloading favlist page {page_num}',
-                query={'media_id': fid, 'pn': page_num, 'ps': 20})
-            if page_data.get('code') != 0:
-                break
-            for media in traverse_obj(page_data, ('data', 'medias', ...)) or []:
-                if media.get('bvid'):
-                    entries.append(self.url_result(
-                        f'https://www.bilibili.com/video/{media["bvid"]}',
-                        BiliBiliIE.ie_key(),
-                        media['bvid'],
-                        media.get('title')))  # videotitle
-            has_more = page_data.get('data', {}).get('has_more', False)
-            page_num += 1
+        entries = self._get_entries(self._download_json(
+            f'https://api.bilibili.com/x/v3/fav/resource/ids?media_id={fid}',
+            fid, note='Download favlist entries'), 'data')
+
         return self.playlist_result(entries, fid, **traverse_obj(list_info, ('data', 'info', {
             'title': ('title', {str}),
             'description': ('intro', {str}),
@@ -1627,7 +1605,7 @@ class BilibiliWatchlaterIE(BilibiliSpaceListBaseIE):
             'https://api.bilibili.com/x/v2/history/toview/web?jsonp=jsonp', list_id)
         if watchlater_info['code'] == -101:
             self.raise_login_required(msg='You need to login to access your watchlater list')
-        entries = [self.url_result(f'https://www.bilibili.com/video/av{video["aid"]}', BiliBiliIE, str(video['aid']), video.get('title')) for video in watchlater_info['data']['list']]  # videotitle
+        entries = self._get_entries(watchlater_info, ('data', 'list'))
         return self.playlist_result(entries, id=list_id, title='稍后再看')
 
 
