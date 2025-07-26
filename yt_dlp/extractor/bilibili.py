@@ -191,10 +191,15 @@ class BilibiliBaseIE(InfoExtractor):
     def _get_subtitles(self, video_id, cid, aid=None):
         subtitles = {}
 
+        headers = {
+            "Accept": "*/*",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
+        }
+
         video_info = self._download_json(
             'https://api.bilibili.com/x/player/wbi/v2', video_id,
             query={'aid': aid, 'cid': cid} if aid else {'bvid': video_id, 'cid': cid},
-            note=f'Extracting subtitle info {cid}', headers=self._HEADERS)
+            note=f'Extracting subtitle info {cid}', headers=headers)
 
         if traverse_obj(video_info, ('data', 'need_login_subtitle')):
             self.report_warning(
@@ -204,7 +209,7 @@ class BilibiliBaseIE(InfoExtractor):
                 'data', 'subtitle', 'subtitles', lambda _, v: v['subtitle_url'] and v['lan'])):
             subtitles.setdefault(s['lan'], []).append({
                 'ext': 'srt',
-                'data': self.json2srt(self._download_json(s['subtitle_url'], video_id)),
+                'data': self.json2srt(self._download_json(s['subtitle_url'], video_id, headers=headers)),
             })
 
         danmaku_url = f'https://comment.bilibili.com/{cid}.xml'
@@ -212,7 +217,8 @@ class BilibiliBaseIE(InfoExtractor):
             danmaku_url, video_id,
             note='Downloading danmaku',
             fatal=False,
-            errnote='Danmaku download failed')
+            errnote='Danmaku download failed',
+            headers=headers)
 
         if danmaku_xml:
             video_width = traverse_obj(video_info, ('data', 'video_data', 'width')) or 1920
