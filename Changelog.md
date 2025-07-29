@@ -4,6 +4,64 @@
 # To create a release, dispatch the https://github.com/yt-dlp/yt-dlp/actions/workflows/release.yml workflow on master
 -->
 
+### 2025.07.29.084201
+
+#### Core changes
+- [Create xml2ass.py](https://github.com/yt-dlp/yt-dlp/commit/1c76f86a6472b7629e98f49a4c802bedd865ab0c) by [pukkandan](https://github.com/pukkandan)
+- [Delete yt_dlp/extractor/douyutv.py](https://github.com/yt-dlp/yt-dlp/commit/8262a0e131b2e740013f5173245d77c6de8d1cfd) by [pukkandan](https://github.com/pukkandan)
+- [Deprecate `darwin_legacy_exe` support](https://github.com/yt-dlp/yt-dlp/commit/cc5a5caac5fbc0d605b52bde0778d6fd5f97b5ab) ([#13857](https://github.com/yt-dlp/yt-dlp/issues/13857)) by [bashonly](https://github.com/bashonly)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/ac6181bbbabbd0188a649df85f845dfc66b29742) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/649e4434e1d8b3c9788c437a7bef11f90c2502c6) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/e94eef4e66f47da7ff3f7199f5cc94051a6082f7) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/8a8f03686a5d0b0de56d871445c3bb8c720db69d) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/a137948b4edf35b31156ec9a8c1b332073dc40ab) by [pukkandan](https://github.com/pukkandan)
+- [Raise minimum recommended Python version to 3.10](https://github.com/yt-dlp/yt-dlp/commit/23c658b9cbe34a151f8f921ab1320bb5d4e40a4d) ([#13859](https://github.com/yt-dlp/yt-dlp/issues/13859)) by [bashonly](https://github.com/bashonly)
+- [Update _extractors.py](https://github.com/yt-dlp/yt-dlp/commit/469ac5fb9d5010a72dbd0a46c485909cd028a540) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/55d9a21fdcbf04baf1ff448003ebd66a53e1e58e) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/7dff7f8093ccc73f250f0ac7e3bf6ecc648c20f7) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/1f6d7c1584f1fa7c2ae0931f1e19c249994dc3d2) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/06c14c59b288061a53d1b7464bfdd7aad9406a6d) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/596fa7c14a319f743f97734d67a73e489334ba46) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/f216ba1fd2a526d046b25d733db9e2994a298ca6) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/11e3fae915ad86953df2dde44b1c26a7c75a0ae9) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/2251acaf778c0a674ed4e4d9251dd3aaacff5422) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/2784fff3a1629dfebefedaa04fb104253535eeb1) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/06cba236008dbfb5c85459e70d70ef41b91a96cb) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/60e17c7635721bf294ec508b1f0a8c1e26c69bee) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/5fc11691ab439999fd299c633737e95ab51d39c7) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/83832ab24b9a074c116811df41e2a0da2c956e7d) by [pukkandan](https://github.com/pukkandan)
+- [Update bilibili.py](https://github.com/yt-dlp/yt-dlp/commit/cfa289d9a82865b786cf55e3143fe864a61229df) by [pukkandan](https://github.com/pukkandan)
+- **utils**
+    - [Add `WINDOWS_VT_MODE` to globals](https://github.com/yt-dlp/yt-dlp/commit/eed94c7306d4ecdba53ad8783b1463a9af5c97f1) ([#12460](https://github.com/yt-dlp/yt-dlp/issues/12460)) by [Grub4K](https://github.com/Grub4K)
+    - `parse_resolution`: [Support width-only pattern](https://github.com/yt-dlp/yt-dlp/commit/4385480795acda35667be008d0bf26b46e9d65b4) ([#13802](https://github.com/yt-dlp/yt-dlp/issues/13802)) by [doe1080](https://github.com/doe1080)
+    - `random_user_agent`: [Bump versions](https://github.com/yt-dlp/yt-dlp/commit/c59ad2b066bbccd3cc4eed580842f961bce7dd4a) ([#13543](https://github.com/yt-dlp/yt-dlp/issues/13543)) by [bashonly](https://github.com/bashonly)
+
+#### Extractor changes
+- **eagleplatform**: [Remove extractors](https://github.com/yt-dlp/yt-dlp/commit/1fe83b0111277a6f214c5ec1819cfbf943508baf) ([#13469](https://github.com/yt-dlp/yt-dlp/issues/13469)) by [doe1080](https://github.com/doe1080)
+- **fauliolive**
+    - [Add extractor](https://github.com/yt-dlp/yt-dlp/commit/3e609b2cedd285739bf82c7af7853735092070a4) ([#13421](https://github.com/yt-dlp/yt-dlp/issues/13421)) by [CasperMcFadden95](https://github.com/CasperMcFadden95), [seproDev](https://github.com/seproDev)
+    - [Support Bahry TV](https://github.com/yt-dlp/yt-dlp/commit/daa1859be1b0e7d123da8b4e0988f2eb7bd47d15) ([#13850](https://github.com/yt-dlp/yt-dlp/issues/13850)) by [CasperMcFadden95](https://github.com/CasperMcFadden95)
+- **neteasemusic**: [Support XFF](https://github.com/yt-dlp/yt-dlp/commit/e8c2bf798b6707d27fecde66161172da69c7cd72) ([#11044](https://github.com/yt-dlp/yt-dlp/issues/11044)) by [c-basalt](https://github.com/c-basalt)
+- **parlview**: [Rework extractor](https://github.com/yt-dlp/yt-dlp/commit/485de69dbfeb7de7bcf9f7fe16d6c6ba9e81e1a0) ([#13788](https://github.com/yt-dlp/yt-dlp/issues/13788)) by [barryvan](https://github.com/barryvan)
+- **plyrembed**: [Add extractor](https://github.com/yt-dlp/yt-dlp/commit/61d4cd0bc01be6ebe11fd53c2d3805d1a2058990) ([#13836](https://github.com/yt-dlp/yt-dlp/issues/13836)) by [seproDev](https://github.com/seproDev)
+- **rtve.es**: program: [Add extractor](https://github.com/yt-dlp/yt-dlp/commit/b831406a1d3be34c159835079d12bae624c43610) by [meGAmeS1](https://github.com/meGAmeS1), [seproDev](https://github.com/seproDev)
+- **sportdeuschland**: [Support embedded player URLs](https://github.com/yt-dlp/yt-dlp/commit/30302df22b7b431ce920e0f7298cd10be9989967) ([#13833](https://github.com/yt-dlp/yt-dlp/issues/13833)) by [InvalidUsernameException](https://github.com/InvalidUsernameException)
+- **sproutvideo**: [Fix extractor](https://github.com/yt-dlp/yt-dlp/commit/59765ecbc08d18005de7143fbb1d1caf90239471) ([#13813](https://github.com/yt-dlp/yt-dlp/issues/13813)) by [bashonly](https://github.com/bashonly)
+- **tbs**: [Fix truTV support](https://github.com/yt-dlp/yt-dlp/commit/0adeb1e54b2d7e95cd19999e71013877850f8f41) ([#9683](https://github.com/yt-dlp/yt-dlp/issues/9683)) by [bashonly](https://github.com/bashonly), [ischmidt20](https://github.com/ischmidt20)
+- **tvw**: news: [Add extractor](https://github.com/yt-dlp/yt-dlp/commit/682334e4b35112f7a5798decdcb5cb12230ef948) ([#12907](https://github.com/yt-dlp/yt-dlp/issues/12907)) by [fries1234](https://github.com/fries1234)
+- **vimeo**: [Fix login support and require authentication](https://github.com/yt-dlp/yt-dlp/commit/afaf60d9fd5a0c7a85aeb1374fd97fbc13cd652c) ([#13823](https://github.com/yt-dlp/yt-dlp/issues/13823)) by [bashonly](https://github.com/bashonly)
+
+#### Downloader changes
+- **external**: [Work around ffmpeg's `file:` URL handling](https://github.com/yt-dlp/yt-dlp/commit/d399505fdf8292332bdc91d33859a0b0d08104fd) ([#13844](https://github.com/yt-dlp/yt-dlp/issues/13844)) by [bashonly](https://github.com/bashonly)
+- **hls**: [Fix `--hls-split-continuity` support](https://github.com/yt-dlp/yt-dlp/commit/57186f958f164daa50203adcbf7ec74d541151cf) ([#13321](https://github.com/yt-dlp/yt-dlp/issues/13321)) by [tchebb](https://github.com/tchebb)
+
+#### Postprocessor changes
+- **embedthumbnail**: [Fix ffmpeg args for embedding in mp3](https://github.com/yt-dlp/yt-dlp/commit/7e3f48d64d237281a97b3df1a61980c78a0302fe) ([#13720](https://github.com/yt-dlp/yt-dlp/issues/13720)) by [atsushi2965](https://github.com/atsushi2965)
+- **xattrmetadata**: [Add macOS "Where from" attribute](https://github.com/yt-dlp/yt-dlp/commit/3e918d825d7ff367812658957b281b8cda8f9ebb) ([#12664](https://github.com/yt-dlp/yt-dlp/issues/12664)) by [rolandcrosby](https://github.com/rolandcrosby)
+
+#### Misc. changes
+- **build**: [Use `macos-14` runner for `macos` builds](https://github.com/yt-dlp/yt-dlp/commit/66aa21dc5a3b79059c38f3ad1d05dc9b29187701) ([#13814](https://github.com/yt-dlp/yt-dlp/issues/13814)) by [bashonly](https://github.com/bashonly)
+
 ### 2025.07.21
 
 #### Important changes
