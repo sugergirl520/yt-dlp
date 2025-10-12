@@ -1395,7 +1395,7 @@ class BilibiliSpaceVideoIE(BilibiliSpaceBaseIE):
                 else:
                     yield self.url_result(f'https://www.bilibili.com/video/{entry["bvid"]}', BiliBiliIE, entry['bvid'], entry['title'])  # videotitle
 
-        metadata, paged_list = self._extract_playlist(fetch_page, get_metadata, get_entries)
+        _, paged_list = self._extract_playlist(fetch_page, get_metadata, get_entries)
         return self.playlist_result(paged_list, playlist_id)
 
 
@@ -1429,7 +1429,7 @@ class BilibiliSpaceAudioIE(BilibiliSpaceBaseIE):
             for entry in page_data.get('data') or []:
                 yield self.url_result(f'https://www.bilibili.com/audio/au{entry["id"]}', BilibiliAudioIE, entry['id'], entry['title'])  # videotitle
 
-        metadata, paged_list = self._extract_playlist(fetch_page, get_metadata, get_entries)
+        _, paged_list = self._extract_playlist(fetch_page, get_metadata, get_entries)
         return self.playlist_result(paged_list, playlist_id)
 
 
