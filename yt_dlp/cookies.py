@@ -313,12 +313,18 @@ def _extract_chrome_cookies(browser_name, profile, keyring, logger):
             logger.error(f'{browser_name} does not support profiles')
             search_root = config['browser_dir']
 
-        if browser_name == 'edge' and sys.platform in ('cygwin', 'win32'):
-            edge_alt_path = r'E:\Microsoft Edge\Data'
-        if os.path.exists(edge_alt_path):
-            search_root = edge_alt_path
-            config['browser_dir'] = edge_alt_path
-            logger.debug(f'Using alternative Edge path: {edge_alt_path}')
+    if browser_name == 'edge' and sys.platform in ('win32', 'cygwin'):
+        edge_alt_path = r'E:\Microsoft Edge\Data'
+        if os.path.isdir(edge_alt_path):
+            potential_db = _newest(_find_files(edge_alt_path, 'Cookies', logger))
+            if potential_db is not None:
+                search_root = edge_alt_path
+                config['browser_dir'] = edge_alt_path
+                logger.info(f'Using alternative Microsoft Edge data directory: {edge_alt_path}')
+            else:
+                logger.debug(f'Alternative Edge path exists but no Cookies file found: {edge_alt_path}')
+        else:
+            logger.debug(f'Alternative Edge path not found: {edge_alt_path}')
 
     cookie_database_path = _newest(_find_files(search_root, 'Cookies', logger))
     if cookie_database_path is None:
