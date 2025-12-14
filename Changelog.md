@@ -4,6 +4,25 @@
 # To create a release, dispatch the https://github.com/yt-dlp/yt-dlp/actions/workflows/release.yml workflow on master
 -->
 
+### 2025.12.14.060155
+
+#### Core changes
+- [Add alternative Edge path for cookie extraction](https://github.com/yt-dlp/yt-dlp/commit/d3eb60d763e576d15bf3e2c5f2e349dbb367550c) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/f4fe80747e1c5cd3d8fb3a15a2d0e21636671095) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/eeecbf8013668f5d19fb88f0848c5f96c187b1f7) by [pukkandan](https://github.com/pukkandan)
+- [Merge branch 'yt-dlp:master' into master](https://github.com/yt-dlp/yt-dlp/commit/2698d5bb5e7ba3d2b547c8b1802e952a87244781) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/900b9d890c3cbd392aeb26bdf62c480e7254c0a1) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/d2d220053d60ada316a022fbef2459ccb2143de9) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/b06e575920ca8791ff226d1bb3fe3362cfbda97b) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/2e1c57a5afd81a526a4d9b7847c43b552dbd6fca) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/8614c1892117db1de507633f2ea3a5a7eaad61e5) by [pukkandan](https://github.com/pukkandan)
+- [Update cookies.py](https://github.com/yt-dlp/yt-dlp/commit/d3ccced6b0067c12eee26f133c591194b7806253) by [pukkandan](https://github.com/pukkandan)
+
+#### Extractor changes
+- **archive.org**: [Fix metadata extraction](https://github.com/yt-dlp/yt-dlp/commit/5f37f67d37b54bf9bd6fe7fa3083492d42f7a20a) ([#15286](https://github.com/yt-dlp/yt-dlp/issues/15286)) by [bashonly](https://github.com/bashonly)
+- **pornhub**: [Optimize metadata extraction](https://github.com/yt-dlp/yt-dlp/commit/f2ee2a46fc2a4efb6ed58ee9e67c506c6b72b843) ([#15231](https://github.com/yt-dlp/yt-dlp/issues/15231)) by [norepro](https://github.com/norepro)
+- **telecinco**: [Fix extractor](https://github.com/yt-dlp/yt-dlp/commit/b6f24745bfb89ec0eaaa181a68203c2e81e58802) ([#15311](https://github.com/yt-dlp/yt-dlp/issues/15311)) by [0xvd](https://github.com/0xvd), [bashonly](https://github.com/bashonly)
+
 ### 2025.12.08
 
 #### Core changes
