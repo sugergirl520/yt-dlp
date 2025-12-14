@@ -1398,5 +1398,3 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
     def clear(self, *args, **kwargs):
         with contextlib.suppress(KeyError):
             return super().clear(*args, **kwargs)
-
-帮我优化一下读取edge的cookie时优先使用E:\Microsoft Edge\Data
