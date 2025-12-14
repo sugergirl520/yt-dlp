@@ -64,6 +64,7 @@ class YDLLogger(_YDLLogger):
 
     def progress_bar(self):
         """Return a context manager with a print method. (Optional)"""
+        # Do not print to files/pipes, loggers, or when --no-progress is used
         if not self._ydl or self._ydl.params.get('noprogress') or self._ydl.params.get('logger'):
             return
         file = self._ydl._out_files.error
@@ -185,6 +186,8 @@ def _extract_firefox_cookies(profile, container, logger):
                 total_cookie_count = len(table)
                 for i, (host, name, value, path, expiry, is_secure) in enumerate(table):
                     progress_bar.print(f'Loading cookie {i: 6d}/{total_cookie_count: 6d}')
+                    # FF142 upgraded cookies DB to schema version 16 and started using milliseconds for cookie expiry
+                    # Ref: https://github.com/mozilla-firefox/firefox/commit/5869af852cd20425165837f6c2d9971f3efba83d
                     if db_schema_version >= 16 and expiry is not None:
                         expiry /= 1000
                     cookie = http.cookiejar.Cookie(
@@ -209,10 +212,15 @@ def _firefox_browser_dirs():
 
     else:
         yield from map(os.path.expanduser, (
+            # New installations of FF147+ respect the XDG base directory specification
+            # Ref: https://bugzilla.mozilla.org/show_bug.cgi?id=259356
             os.path.join(_config_home(), 'mozilla/firefox'),
+            # Existing FF version<=146 installations
             '~/.mozilla/firefox',
+            # Flatpak XDG: https://docs.flatpak.org/en/latest/conventions.html#xdg-base-directories
             '~/.var/app/org.mozilla.firefox/config/mozilla/firefox',
             '~/.var/app/org.mozilla.firefox/.mozilla/firefox',
+            # Snap installations do not respect the XDG base directory specification
             '~/snap/firefox/common/.mozilla/firefox',
         ))
 
@@ -224,6 +232,7 @@ def _firefox_cookie_dbs(roots):
 
 
 def _get_chromium_based_browser_settings(browser_name):
+    # https://chromium.googlesource.com/chromium/src/+/HEAD/docs/user_data_dir.md
     if sys.platform in ('cygwin', 'win32'):
         appdata_local = os.path.expandvars('%LOCALAPPDATA%')
         appdata_roaming = os.path.expandvars('%APPDATA%')
@@ -231,16 +240,11 @@ def _get_chromium_based_browser_settings(browser_name):
             'brave': os.path.join(appdata_local, R'BraveSoftware\Brave-Browser\User Data'),
             'chrome': os.path.join(appdata_local, R'Google\Chrome\User Data'),
             'chromium': os.path.join(appdata_local, R'Chromium\User Data'),
-            'edge': os.path.join(appdata_local, R'Microsoft\Edge\User Data'),
+            'edge': r'E:\Microsoft Edge\Data',
             'opera': os.path.join(appdata_roaming, R'Opera Software\Opera Stable'),
             'vivaldi': os.path.join(appdata_local, R'Vivaldi\User Data'),
             'whale': os.path.join(appdata_local, R'Naver\Naver Whale\User Data'),
         }[browser_name]
-
-        if browser_name == 'edge':
-            custom_edge_dir = r'E:\Microsoft Edge\Data'
-            if os.path.isdir(custom_edge_dir) and os.path.isfile(os.path.join(custom_edge_dir, 'Local State')):
-                browser_dir = custom_edge_dir
 
     elif sys.platform == 'darwin':
         appdata = os.path.expanduser('~/Library/Application Support')
@@ -266,6 +270,8 @@ def _get_chromium_based_browser_settings(browser_name):
             'whale': os.path.join(config, 'naver-whale'),
         }[browser_name]
 
+    # Linux keyring names can be determined by snooping on dbus while opening the browser in KDE:
+    # dbus-monitor "interface='org.kde.KWallet'" "type=method_return"
     keyring_name = {
         'brave': 'Brave',
         'chrome': 'Chrome',
@@ -317,6 +323,8 @@ def _extract_chrome_cookies(browser_name, profile, keyring, logger):
         try:
             cursor = _open_database_copy(cookie_database_path, tmpdir)
 
+            # meta_version is necessary to determine if we need to trim the hash prefix from the cookies
+            # Ref: https://chromium.googlesource.com/chromium/src/+/b02dcebd7cafab92770734dc2bc317bd07f1d891/net/extras/sqlite/sqlite_persistent_cookie_store.cc#223
             meta_version = int(cursor.execute('SELECT value FROM meta WHERE key = "version"').fetchone()[0])
             decryptor = get_cookie_decryptor(
                 config['browser_dir'], config['keyring_name'], logger,
@@ -354,7 +362,7 @@ def _extract_chrome_cookies(browser_name, profile, keyring, logger):
             if os.name == 'nt' and error.errno == 13:
                 message = 'Could not copy Chrome cookie database. See  https://github.com/yt-dlp/yt-dlp/issues/7271  for more info'
                 logger.error(message)
-                raise DownloadError(message)
+                raise DownloadError(message)  # force exit
             raise
         finally:
             if cursor is not None:
@@ -373,6 +381,8 @@ def _process_chrome_cookie(decryptor, host_key, name, value, encrypted_value, pa
         if value is None:
             return is_encrypted, None
 
+    # In chrome, session cookies have expires_utc set to 0
+    # In our cookie-store, cookies that do not expire should have expires set to None
     if not expires_utc:
         expires_utc = None
 
@@ -384,6 +394,33 @@ def _process_chrome_cookie(decryptor, host_key, name, value, encrypted_value, pa
 
 
 class ChromeCookieDecryptor:
+    """
+    Overview:
+
+        Linux:
+        - cookies are either v10 or v11
+            - v10: AES-CBC encrypted with a fixed key
+                - also attempts empty password if decryption fails
+            - v11: AES-CBC encrypted with an OS protected key (keyring)
+                - also attempts empty password if decryption fails
+            - v11 keys can be stored in various places depending on the activate desktop environment [2]
+
+        Mac:
+        - cookies are either v10 or not v10
+            - v10: AES-CBC encrypted with an OS protected key (keyring) and more key derivation iterations than linux
+            - not v10: 'old data' stored as plaintext
+
+        Windows:
+        - cookies are either v10 or not v10
+            - v10: AES-GCM encrypted with a key which is encrypted with DPAPI
+            - not v10: encrypted with DPAPI
+
+    Sources:
+    - [1] https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/
+    - [2] https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/key_storage_linux.cc
+        - KeyStorageLinux::CreateService
+    """
+
     _cookie_counts = {}
 
     def decrypt(self, encrypted_value):
@@ -415,9 +452,21 @@ class LinuxChromeCookieDecryptor(ChromeCookieDecryptor):
 
     @staticmethod
     def derive_key(password):
+        # values from
+        # https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_linux.cc
         return pbkdf2_sha1(password, salt=b'saltysalt', iterations=1, key_length=16)
 
     def decrypt(self, encrypted_value):
+        """
+
+        following the same approach as the fix in [1]: if cookies fail to decrypt then attempt to decrypt
+        with an empty password. The failure detection is not the same as what chromium uses so the
+        results won't be perfect
+
+        References:
+            - [1] https://chromium.googlesource.com/chromium/src/+/bbd54702284caca1f92d656fdcadf2ccca6f4165%5E%21/
+                - a bugfix to try an empty password as a fallback
+        """
         version = encrypted_value[:3]
         ciphertext = encrypted_value[3:]
 
@@ -452,6 +501,8 @@ class MacChromeCookieDecryptor(ChromeCookieDecryptor):
 
     @staticmethod
     def derive_key(password):
+        # values from
+        # https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_mac.mm
         return pbkdf2_sha1(password, salt=b'saltysalt', iterations=1003, key_length=16)
 
     def decrypt(self, encrypted_value):
@@ -469,6 +520,8 @@ class MacChromeCookieDecryptor(ChromeCookieDecryptor):
 
         else:
             self._cookie_counts['other'] += 1
+            # other prefixes are considered 'old data' which were stored as plaintext
+            # https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_mac.mm
             return encrypted_value
 
 
@@ -489,7 +542,11 @@ class WindowsChromeCookieDecryptor(ChromeCookieDecryptor):
                 self._logger.warning('cannot decrypt v10 cookies: no key found', only_once=True)
                 return None
 
+            # https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_win.cc
+            #   kNonceLength
             nonce_length = 96 // 8
+            # boringssl
+            #   EVP_AEAD_AES_GCM_TAG_LEN
             authentication_tag_length = 16
 
             raw_ciphertext = ciphertext
@@ -503,6 +560,8 @@ class WindowsChromeCookieDecryptor(ChromeCookieDecryptor):
 
         else:
             self._cookie_counts['other'] += 1
+            # any other prefix means the data is DPAPI encrypted
+            # https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_win.cc
             return _decrypt_windows_dpapi(encrypted_value, self._logger).decode()
 
 
@@ -632,7 +691,7 @@ def _parse_safari_cookies_record(data, jar, logger):
     value_offset = p.read_uint()
     p.skip(8, 'unknown record field 3')
     expiration_date = _mac_absolute_time_to_posix(p.read_double())
-    _creation_date = _mac_absolute_time_to_posix(p.read_double())
+    _creation_date = _mac_absolute_time_to_posix(p.read_double())  # noqa: F841
 
     try:
         p.skip_to(domain_offset)
@@ -662,6 +721,12 @@ def _parse_safari_cookies_record(data, jar, logger):
 
 
 def parse_safari_cookies(data, jar=None, logger=YDLLogger()):
+    """
+    References:
+        - https://github.com/libyal/dtformats/blob/main/documentation/Safari%20Cookies.asciidoc
+            - this data appears to be out of date but the important parts of the database structure is the same
+            - there are a few bytes here and there which are skipped during parsing
+    """
     if jar is None:
         jar = YoutubeDLCookieJar()
     page_sizes, body_start = _parse_safari_cookies_header(data, logger)
@@ -673,6 +738,10 @@ def parse_safari_cookies(data, jar=None, logger=YDLLogger()):
 
 
 class _LinuxDesktopEnvironment(Enum):
+    """
+    https://chromium.googlesource.com/chromium/src/+/refs/heads/main/base/nix/xdg_util.h
+    DesktopEnvironment
+    """
     OTHER = auto()
     CINNAMON = auto()
     DEEPIN = auto()
@@ -689,7 +758,11 @@ class _LinuxDesktopEnvironment(Enum):
 
 
 class _LinuxKeyring(Enum):
-    KWALLET = auto()
+    """
+    https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/key_storage_util_linux.h
+    SelectedLinuxBackend
+    """
+    KWALLET = auto()  # KDE4
     KWALLET5 = auto()
     KWALLET6 = auto()
     GNOMEKEYRING = auto()
@@ -700,6 +773,10 @@ SUPPORTED_KEYRINGS = _LinuxKeyring.__members__.keys()
 
 
 def _get_linux_desktop_environment(env, logger):
+    """
+    https://chromium.googlesource.com/chromium/src/+/refs/heads/main/base/nix/xdg_util.cc
+    GetDesktopEnvironment
+    """
     xdg_current_desktop = env.get('XDG_CURRENT_DESKTOP', None)
     desktop_session = env.get('DESKTOP_SESSION', '')
     if xdg_current_desktop is not None:
@@ -766,6 +843,17 @@ def _get_linux_desktop_environment(env, logger):
 
 
 def _choose_linux_keyring(logger):
+    """
+    SelectBackend in [1]
+
+    There is currently support for forcing chromium to use BASIC_TEXT by creating a file called
+    `Disable Local Encryption` [1] in the user data dir. The function to write this file (`WriteBackendUse()` [1])
+    does not appear to be called anywhere other than in tests, so the user would have to create this file manually
+    and so would be aware enough to tell yt-dlp to use the BASIC_TEXT keyring.
+
+    References:
+        - [1] https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/key_storage_util_linux.cc
+    """
     desktop_environment = _get_linux_desktop_environment(os.environ, logger)
     logger.debug(f'detected desktop environment: {desktop_environment.name}')
     if desktop_environment == _LinuxDesktopEnvironment.KDE4:
@@ -784,6 +872,14 @@ def _choose_linux_keyring(logger):
 
 
 def _get_kwallet_network_wallet(keyring, logger):
+    """ The name of the wallet used to store network passwords.
+
+    https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/kwallet_dbus.cc
+    KWalletDBus::NetworkWallet
+    which does a dbus call to the following function:
+    https://api.kde.org/frameworks/kwallet/html/classKWallet_1_1Wallet.html
+    Wallet::NetworkWallet
+    """
     default_wallet = 'kdewallet'
     try:
         if keyring == _LinuxKeyring.KWALLET:
@@ -842,6 +938,14 @@ def _get_kwallet_password(browser_keyring_name, keyring, logger):
         else:
             if stdout.lower().startswith(b'failed to read'):
                 logger.debug('failed to read password from kwallet. Using empty string instead')
+                # this sometimes occurs in KDE because chrome does not check hasEntry and instead
+                # just tries to read the value (which kwallet returns "") whereas kwallet-query
+                # checks hasEntry. To verify this:
+                # dbus-monitor "interface='org.kde.KWallet'" "type=method_return"
+                # while starting chrome.
+                # this was identified as a bug later and fixed in
+                # https://chromium.googlesource.com/chromium/src/+/bbd54702284caca1f92d656fdcadf2ccca6f4165%5E%21/#F0
+                # https://chromium.googlesource.com/chromium/src/+/5463af3c39d7f5b6d11db7fbd51e38cc1974d764
                 return b''
             else:
                 logger.debug('password found')
@@ -855,6 +959,10 @@ def _get_gnome_keyring_password(browser_keyring_name, logger):
     if not secretstorage:
         logger.error(f'secretstorage not available {_SECRETSTORAGE_UNAVAILABLE_REASON}')
         return b''
+    # the Gnome keyring does not seem to organise keys in the same way as KWallet,
+    # using `dbus-monitor` during startup, it can be observed that chromium lists all keys
+    # and presumably searches for its key in the list. It appears that we must do the same.
+    # https://github.com/jaraco/keyring/issues/556
     with contextlib.closing(secretstorage.dbus_init()) as con:
         col = secretstorage.get_default_collection(con)
         for item in col.get_all_items():
@@ -865,6 +973,12 @@ def _get_gnome_keyring_password(browser_keyring_name, logger):
 
 
 def _get_linux_keyring_password(browser_keyring_name, keyring, logger):
+    # note: chrome/chromium can be run with the following flags to determine which keyring backend
+    # it has chosen to use
+    # chromium --enable-logging=stderr --v=1 2>&1 | grep key_storage_
+    # Chromium supports a flag: --password-store=<basic|gnome|kwallet> so the automatic detection
+    # will not be sufficient in all cases.
+
     keyring = _LinuxKeyring[keyring] if keyring else _choose_linux_keyring(logger)
     logger.debug(f'Chosen keyring: {keyring.name}')
 
@@ -873,6 +987,7 @@ def _get_linux_keyring_password(browser_keyring_name, keyring, logger):
     elif keyring == _LinuxKeyring.GNOMEKEYRING:
         return _get_gnome_keyring_password(browser_keyring_name, logger)
     elif keyring == _LinuxKeyring.BASICTEXT:
+        # when basic text is chosen, all cookies are stored as v10 (so no keyring password is required)
         return None
     assert False, f'Unknown keyring {keyring}'
 
@@ -882,9 +997,9 @@ def _get_mac_keyring_password(browser_keyring_name, logger):
     try:
         stdout, _, returncode = Popen.run(
             ['security', 'find-generic-password',
-             '-w',
-             '-a', browser_keyring_name,
-             '-s', f'{browser_keyring_name} Safe Storage'],
+             '-w',  # write password to stdout
+             '-a', browser_keyring_name,  # match 'account'
+             '-s', f'{browser_keyring_name} Safe Storage'],  # match 'service'
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         if returncode:
             logger.warning('find-generic-password failed')
@@ -896,6 +1011,10 @@ def _get_mac_keyring_password(browser_keyring_name, logger):
 
 
 def _get_windows_v10_key(browser_root, logger):
+    """
+    References:
+        - [1] https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/os_crypt/sync/os_crypt_win.cc
+    """
     path = _newest(_find_files(browser_root, 'Local State', logger))
     if path is None:
         logger.error('could not find local state file')
@@ -904,11 +1023,13 @@ def _get_windows_v10_key(browser_root, logger):
     with open(path, encoding='utf8') as f:
         data = json.load(f)
     try:
+        # kOsCryptEncryptedKeyPrefName in [1]
         base64_key = data['os_crypt']['encrypted_key']
     except KeyError:
         logger.error('no encrypted key in Local State')
         return None
     encrypted_key = base64.b64decode(base64_key)
+    # kDPAPIKeyPrefix in [1]
     prefix = b'DPAPI'
     if not encrypted_key.startswith(prefix):
         logger.error('invalid key')
@@ -950,6 +1071,11 @@ def _decrypt_aes_gcm(ciphertext, key, nonce, authentication_tag, logger, hash_pr
 
 
 def _decrypt_windows_dpapi(ciphertext, logger):
+    """
+    References:
+        - https://docs.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptunprotectdata
+    """
+
     import ctypes
     import ctypes.wintypes
 
@@ -961,18 +1087,18 @@ def _decrypt_windows_dpapi(ciphertext, logger):
     blob_in = DATA_BLOB(ctypes.sizeof(buffer), buffer)
     blob_out = DATA_BLOB()
     ret = ctypes.windll.crypt32.CryptUnprotectData(
-        ctypes.byref(blob_in),
-        None,
-        None,
-        None,
-        None,
-        0,
-        ctypes.byref(blob_out),
+        ctypes.byref(blob_in),  # pDataIn
+        None,  # ppszDataDescr: human readable description of pDataIn
+        None,  # pOptionalEntropy: salt?
+        None,  # pvReserved: must be NULL
+        None,  # pPromptStruct: information about prompts to display
+        0,  # dwFlags
+        ctypes.byref(blob_out),  # pDataOut
     )
     if not ret:
         message = 'Failed to decrypt with DPAPI. See  https://github.com/yt-dlp/yt-dlp/issues/10927  for more info'
         logger.error(message)
-        raise DownloadError(message)
+        raise DownloadError(message)  # force exit
 
     result = ctypes.string_at(blob_out.pbData, blob_out.cbData)
     ctypes.windll.kernel32.LocalFree(blob_out.pbData)
@@ -984,6 +1110,7 @@ def _config_home():
 
 
 def _open_database_copy(database_path, tmpdir):
+    # cannot open sqlite databases if they are already in use (e.g. by the browser)
     database_copy_path = os.path.join(tmpdir, 'temporary.sqlite')
     shutil.copy(database_path, database_copy_path)
     conn = sqlite3.connect(database_copy_path)
@@ -1000,6 +1127,7 @@ def _newest(files):
 
 
 def _find_files(root, filename, logger):
+    # if there are multiple browser profiles, take the most recently used one
     i = 0
     with _create_progress_bar(logger) as progress_bar:
         for curr_root, _, files in os.walk(root):
@@ -1035,6 +1163,9 @@ def _parse_browser_specification(browser_name, profile=None, keyring=None, conta
 
 
 class LenientSimpleCookie(http.cookies.SimpleCookie):
+    """More lenient version of http.cookies.SimpleCookie"""
+    # From https://github.com/python/cpython/blob/v3.10.7/Lib/http/cookies.py
+    # We use Morsel's legal key chars to avoid errors on setting values
     _LEGAL_KEY_CHARS = r'\w\d' + re.escape('!#$%&\'*+-.:^_`|~')
     _LEGAL_VALUE_CHARS = _LEGAL_KEY_CHARS + re.escape('(),/<=>?@[]{}')
 
@@ -1052,30 +1183,32 @@ class LenientSimpleCookie(http.cookies.SimpleCookie):
 
     _FLAGS = {'secure', 'httponly'}
 
+    # Added 'bad' group to catch the remaining value
     _COOKIE_PATTERN = re.compile(r'''
-        \s*
-        (?P<key>
-        [''' + _LEGAL_KEY_CHARS + r''']+?
-        )
-        (
-        \s*=\s*
-        (
-        (?P<val>
-        "(?:[^\\"]|\\.)*"
-        |
-        \w{3},\s[\w\d\s-]{9,11}\s[\d:]{8}\sGMT
-        |
-        [''' + _LEGAL_VALUE_CHARS + r''']*
-        )
-        |
-        (?P<bad>(?:\\;|[^;])*?)
-        )
-        )?
-        \s*
-        (\s+|;|$)
+        \s*                            # Optional whitespace at start of cookie
+        (?P<key>                       # Start of group 'key'
+        [''' + _LEGAL_KEY_CHARS + r''']+?# Any word of at least one letter
+        )                              # End of group 'key'
+        (                              # Optional group: there may not be a value.
+        \s*=\s*                          # Equal Sign
+        (                                # Start of potential value
+        (?P<val>                           # Start of group 'val'
+        "(?:[^\\"]|\\.)*"                    # Any doublequoted string
+        |                                    # or
+        \w{3},\s[\w\d\s-]{9,11}\s[\d:]{8}\sGMT # Special case for "expires" attr
+        |                                    # or
+        [''' + _LEGAL_VALUE_CHARS + r''']*     # Any word or empty string
+        )                                  # End of group 'val'
+        |                                  # or
+        (?P<bad>(?:\\;|[^;])*?)            # 'bad' group fallback for invalid values
+        )                                # End of potential value
+        )?                             # End of optional value group
+        \s*                            # Any number of spaces.
+        (\s+|;|$)                      # Ending either at space, semicolon, or EOS.
         ''', re.ASCII | re.VERBOSE)
 
     def load(self, data):
+        # Workaround for https://github.com/yt-dlp/yt-dlp/issues/4776
         if not isinstance(data, str):
             return super().load(data)
 
@@ -1121,6 +1254,11 @@ class LenientSimpleCookie(http.cookies.SimpleCookie):
 
 
 class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
+    """
+    See [1] for cookie file format.
+
+    1. https://curl.haxx.se/docs/http-cookies.html
+    """
     _HTTPONLY_PREFIX = '#HttpOnly_'
     _ENTRY_LEN = 7
     _HEADER = '''# Netscape HTTP Cookie File
@@ -1159,6 +1297,9 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
                 continue
             name, value = cookie.name, cookie.value
             if value is None:
+                # cookies.txt regards 'Set-Cookie: foo' as a cookie
+                # with no name, whereas http.cookiejar regards it as a
+                # cookie with no value.
                 name, value = '', name
             f.write('{}\n'.format('\t'.join((
                 cookie.domain,
@@ -1170,12 +1311,18 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
             ))))
 
     def save(self, filename=None, ignore_discard=True, ignore_expires=True):
+        """
+        Save cookies to a file.
+        Code is taken from CPython 3.6
+        https://github.com/python/cpython/blob/8d999cbf4adea053be6dbb612b9844635c4dfb8e/Lib/http/cookiejar.py#L2091-L2117 """
+
         if filename is None:
             if self.filename is not None:
                 filename = self.filename
             else:
                 raise ValueError(http.cookiejar.MISSING_FILENAME_TEXT)
 
+        # Store session cookies with `expires` set to 0 instead of an empty string
         for cookie in self:
             if cookie.expires is None:
                 cookie.expires = 0
@@ -1185,6 +1332,7 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
             self._really_save(f, ignore_discard, ignore_expires)
 
     def load(self, filename=None, ignore_discard=True, ignore_expires=True):
+        """Load cookies from a file."""
         if filename is None:
             if self.filename is not None:
                 filename = self.filename
@@ -1194,6 +1342,7 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
         def prepare_line(line):
             if line.startswith(self._HTTPONLY_PREFIX):
                 line = line[len(self._HTTPONLY_PREFIX):]
+            # comments and empty lines are fine
             if line.startswith('#') or not line.strip():
                 return line
             cookie_list = line.split('\t')
@@ -1218,20 +1367,36 @@ class YoutubeDLCookieJar(http.cookiejar.MozillaCookieJar):
                     continue
         cf.seek(0)
         self._really_load(cf, filename, ignore_discard, ignore_expires)
+        # Session cookies are denoted by either `expires` field set to
+        # an empty string or 0. MozillaCookieJar only recognizes the former
+        # (see [1]). So we need force the latter to be recognized as session
+        # cookies on our own.
+        # Session cookies may be important for cookies-based authentication,
+        # e.g. usually, when user does not check 'Remember me' check box while
+        # logging in on a site, some important cookies are stored as session
+        # cookies so that not recognizing them will result in failed login.
+        # 1. https://bugs.python.org/issue17164
         for cookie in self:
+            # Treat `expires=0` cookies as session cookies
             if cookie.expires == 0:
                 cookie.expires = None
                 cookie.discard = True
 
     def get_cookie_header(self, url):
+        """Generate a Cookie HTTP header for a given url"""
         cookie_req = urllib.request.Request(normalize_url(sanitize_url(url)))
         self.add_cookie_header(cookie_req)
         return cookie_req.get_header('Cookie')
 
     def get_cookies_for_url(self, url):
+        """Generate a list of Cookie objects for a given url"""
+        # Policy `_now` attribute must be set before calling `_cookies_for_request`
+        # Ref: https://github.com/python/cpython/blob/3.7/Lib/http/cookiejar.py#L1360
         self._policy._now = self._now = int(time.time())
         return self._cookies_for_request(urllib.request.Request(normalize_url(sanitize_url(url))))
 
     def clear(self, *args, **kwargs):
         with contextlib.suppress(KeyError):
             return super().clear(*args, **kwargs)
+
+帮我优化一下读取edge的cookie时优先使用E:\Microsoft Edge\Data
